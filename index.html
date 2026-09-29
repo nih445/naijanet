@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Naija network status</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#fff;--card:#f5f5f2;--tx:#1a1a18;--mu:#6b6b66;--bd:#dcdcd6;--okb:#e3f2d8;--okt:#2f5a0e;--slb:#faeeda;--slt:#6b4306;--dnb:#fcebeb;--dnt:#8a2222;--ac:#185fa5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1f1d;--card:#2a2a27;--tx:#f1efe8;--mu:#a8a69c;--bd:#444441;--okb:#27500a;--okt:#c0dd97;--slb:#633806;--slt:#fac775;--dnb:#791f1f;--dnt:#f7c1c1;--ac:#85b7eb}}
+:root[data-theme="dark"]{--bg:#1f1f1d;--card:#2a2a27;--tx:#f1efe8;--mu:#a8a69c;--bd:#444441;--okb:#27500a;--okt:#c0dd97;--slb:#633806;--slt:#fac775;--dnb:#791f1f;--dnt:#f7c1c1;--ac:#85b7eb}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:480px;margin:0 auto;padding:16px}
+h1{font-size:22px;font-weight:500;margin:0}
+.mu{color:var(--mu);font-size:13px;margin:2px 0 0}
+select,button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+select{width:100%;margin:12px 0}
+.ban{border-radius:8px;padding:10px 12px;font-size:14px;margin:0 0 8px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}
+.nm{font-weight:500;margin:0}
+.pill{font-size:13px;padding:3px 10px;border-radius:8px}
+.ok{background:var(--okb);color:var(--okt)}.sl{background:var(--slb);color:var(--slt)}.dn{background:var(--dnb);color:var(--dnt)}
+.big{width:100%;margin-top:14px;min-height:48px;background:var(--ac);color:#fff;border:0;font-weight:500}
+.sheet{background:var(--card);border-radius:12px;padding:14px;margin-top:14px}
+.chip{display:inline-block;margin:0 6px 8px 0;min-height:44px}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.msg{font-size:14px;margin:10px 0 0;min-height:20px}
+.note{font-size:12px;color:var(--mu);margin-top:18px}
+</style></head><body><main>
+<h1>Network status</h1>
+<p class="mu">Live view of MTN, Airtel, Glo and 9mobile</p>
+<select id="city" aria-label="State"></select>
+<div id="ban"></div><div id="list"></div>
+<button class="big" id="open">Report a problem</button>
+<div class="sheet" id="sheet" hidden>
+<p class="nm">Which network?</p><div id="nets"></div>
+<p class="nm">What's wrong?</p><div id="probs"></div>
+<button class="big" id="send" style="margin-top:4px">Send report</button>
+<p class="msg" id="msg" role="status"></p>
+</div>
+<p class="note" id="note">Loading reports…</p>
+</main>
+<script>
+var DB="https://naijanet-d1c6d-default-rtdb.europe-west1.firebasedatabase.app";
+var NET=["MTN","Airtel","Glo","9mobile"],PROB=["No signal","Slow data","Calls failing","SMS delayed"];
+var STATES=["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"];
+var sel=document.getElementById("city");STATES.forEach(function(s){var o=document.createElement("option");o.textContent=s;sel.appendChild(o)});
+try{sel.value=localStorage.getItem("st")||"Lagos"}catch(e){sel.value="Lagos"}
+var reports=[],selN=null,selP=null,online=true;
+function city(){return sel.value}
+function key(s){return s.replace(/ /g,"_")}
+function ls(k,d){try{return JSON.parse(localStorage.getItem(k)||d)}catch(e){return JSON.parse(d)}}
+function lset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function count(i){var h=Date.now()-36e5;return reports.filter(function(r){return r.n===i&&r.t>h}).length}
+function st(c){return c>=15?["Down","dn"]:c>=5?["Slow","sl"]:["Working","ok"]}
+function render(){
+var h="",w=0,wi=0;
+NET.forEach(function(n,i){var c=count(i),s=st(c);if(c>w){w=c;wi=i}
+h+='<div class="row"><div><p class="nm">'+n+'</p><p class="mu">'+c+' report'+(c===1?"":"s")+' in the last hour</p></div><span class="pill '+s[1]+'">'+s[0]+'</span></div>'});
+document.getElementById("list").innerHTML=h;
+var b=document.getElementById("ban");b.className="ban "+st(w)[1];
+b.textContent=w>=5?NET[wi]+" has "+w+" reports in "+city()+" in the last hour":"No major problems reported in "+city();
+document.getElementById("note").textContent=online?"Live data from other users. Updates every 30 seconds.":"You're offline. Showing the last data. Your reports will send when you're back online."}
+function load(){
+var u=DB+"/reports/"+key(city())+".json?orderBy="+encodeURIComponent('"$key"')+"&limitToLast=300";
+return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){reports=d?Object.keys(d).map(function(k){return d[k]}):[];online=true;render()}).catch(function(){online=false;render()})}
+function post(r){return fetch(DB+"/reports/"+key(r.c)+".json",{method:"POST",body:JSON.stringify({n:r.n,p:r.p,t:r.t})}).then(function(x){if(!x.ok)throw 0})}
+function flush(){var q=ls("q","[]");if(!q.length)return;var rest=[];
+q.reduce(function(p,r){return p.then(function(){return post(r)}).catch(function(){rest.push(r)})},Promise.resolve()).then(function(){lset("q",rest);load()})}
+function chips(id,arr,setter){var el=document.getElementById(id);arr.forEach(function(t,i){var b=document.createElement("button");b.className="chip";b.textContent=t;
+b.onclick=function(){setter(i);Array.prototype.forEach.call(el.children,function(x){x.classList.remove("on")});b.classList.add("on")};el.appendChild(b)})}
+chips("nets",NET,function(i){selN=i});chips("probs",PROB,function(i){selP=i});
+document.getElementById("open").onclick=function(){var s=document.getElementById("sheet");s.hidden=!s.hidden};
+sel.onchange=function(){lset("st",city());reports=[];render();load()};
+document.getElementById("send").onclick=function(){
+var m=document.getElementById("msg");
+if(selN===null||selP===null){m.textContent="Pick a network and a problem first";return}
+var last=ls("last","{}"),k=city()+selN;
+if(last[k]&&Date.now()-last[k]<6e5){m.textContent="You already reported "+NET[selN]+" here in the last 10 minutes";return}
+last[k]=Date.now();lset("last",last);
+var r={c:city(),n:selN,p:selP,t:Date.now()};
+post(r).then(function(){m.textContent="Report sent. Thank you";load()}).catch(function(){var q=ls("q","[]");q.push(r);lset("q",q);m.textContent="No connection. Saved and will send when you're back online"})};
+window.addEventListener("online",flush);
+render();load().then(flush);setInterval(load,30000);
+</script></body></html>
