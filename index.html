@@ -23,9 +23,15 @@ select{width:100%;margin:12px 0}
 .chip{display:inline-block;margin:0 6px 8px 0;min-height:44px}
 .chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 .msg{font-size:14px;margin:10px 0 0;min-height:20px}
+.ta{width:100%;box-sizing:border-box;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin:0 0 8px}
+.bar{height:8px;background:var(--bd);border-radius:8px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--ac)}.ov{background:var(--card);border-radius:12px;padding:14px;margin:0 0 8px}
+.w{width:22px;height:22px;vertical-align:-5px;margin-right:6px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}.w path{opacity:.18}.w path.on{opacity:1;animation:pu 1.6s ease-in-out infinite}.w path.a2{animation-delay:.25s}.w path.a3{animation-delay:.5s}.w circle{fill:currentColor;stroke:none}.w.ok{color:var(--okt)}.w.sl{color:var(--slt)}.w.dn{color:var(--dnt)}.w.gr{color:var(--mu)}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.3}}
+.live{font-size:12px;font-weight:500;color:var(--okt);background:var(--okb);padding:3px 8px;border-radius:8px;vertical-align:middle;margin-left:8px}.live i{display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:5px;animation:pu 1.2s infinite}
+@media (prefers-reduced-motion:reduce){.w path.on,.live i{animation:none}}
 .note{font-size:12px;color:var(--mu);margin-top:18px}
 </style></head><body><main>
-<h1>Network status</h1>
+<h1>Network status <span class="live"><i></i>LIVE</span></h1>
 <p class="mu">Live view of MTN, Airtel, Glo and 9mobile</p>
 <select id="city" aria-label="State"></select>
 <div id="ban"></div><div id="list"></div>
@@ -36,6 +42,15 @@ select{width:100%;margin:12px 0}
 <button class="big" id="send" style="margin-top:4px">Send report</button>
 <p class="msg" id="msg" role="status"></p>
 </div>
+<button class="big" id="fbopen" style="background:var(--card);color:var(--tx);border:1px solid var(--bd)">Send feedback</button>
+<div class="sheet" id="fb" hidden>
+<p class="nm">Tell us your network problem</p>
+<p class="mu" style="margin-bottom:8px">What happened, where, and when? Your words help us improve.</p>
+<textarea class="ta" id="fbm" rows="5" maxlength="500" placeholder="Example: MTN data is very slow in Awka since morning"></textarea>
+<input class="ta" id="fbc" maxlength="60" placeholder="Phone or WhatsApp (optional)">
+<button class="big" id="fbsend" style="margin-top:4px">Send feedback</button>
+<p class="msg" id="fbmsg" role="status"></p>
+</div>
 <p class="note" id="note">Loading reports…</p>
 </main>
 <script>
@@ -43,19 +58,23 @@ var DB="https://naijanet-d1c6d-default-rtdb.europe-west1.firebasedatabase.app";
 var NET=["MTN","Airtel","Glo","9mobile"],PROB=["No signal","Slow data","Calls failing","SMS delayed","Working fine"];
 var STATES=["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"];
 var sel=document.getElementById("city");STATES.forEach(function(s){var o=document.createElement("option");o.textContent=s;sel.appendChild(o)});
-try{sel.value=localStorage.getItem("st")||"Lagos"}catch(e){sel.value="Lagos"}
+var sv=ls("st",'"Lagos"');sel.value=STATES.indexOf(sv)>-1?sv:"Lagos";
 var reports=[],selN=null,selP=null,online=true;
 function city(){return sel.value}
 function key(s){return s.replace(/ /g,"_")}
 function ls(k,d){try{return JSON.parse(localStorage.getItem(k)||d)}catch(e){return JSON.parse(d)}}
 function lset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-function stat(i){var h=Date.now()-36e5,g=0,b=0;reports.forEach(function(r){if(r.n===i&&r.t>h){if(r.p===4)g++;else b++}});var t=g+b;return{t:t,s:t?Math.round(g/t*100):null}}
+function stat(i){var h=Date.now()-36e5,g=0,b=0;reports.forEach(function(r){if(r.n===i&&r.t>h){if(r.p===4)g++;else b++}});var t=g+b;return{t:t,g:g,s:t?Math.round(g/t*100):null}}
 function lab(o){if(o.t<3)return[o.t?"Too few reports":"No reports yet","gr"];return o.s>=70?["Good","ok"]:o.s>=40?["Unstable","sl"]:["Poor","dn"]}
+function wifi(n,c,px){var a=["M9 15.5a5 5 0 0 1 6 0","M5.5 12a10 10 0 0 1 13 0","M2 8.5a15 15 0 0 1 20 0"],p="";a.forEach(function(d,k){p+='<path class="a'+(k+1)+(k<n?' on':'')+'" d="'+d+'"/>'});return'<svg class="w '+c+'" viewBox="0 0 24 24" style="width:'+px+'px;height:'+px+'px" aria-hidden="true">'+p+'<circle cx="12" cy="19" r="1.7"/></svg>'}
+function lvl(o){return o.t<3?0:o.s>=70?3:o.s>=40?2:1}
 function render(){
-var h="",worst=null;
-NET.forEach(function(n,i){var o=stat(i),l=lab(o);
+var h="",worst=null,tg=0,tt=0;
+NET.forEach(function(n,i){var o=stat(i),l=lab(o);tg+=o.g;tt+=o.t;
 if(o.t>=3&&o.s<40&&(!worst||o.s<worst.s))worst={n:n,s:o.s,t:o.t};
-h+='<div class="row"><div><p class="nm">'+n+'</p><p class="mu">'+o.t+' report'+(o.t===1?"":"s")+' in the last hour</p></div><div style="text-align:right">'+(o.t>=3?'<p class="nm" style="font-size:22px">'+o.s+'%</p>':'')+'<span class="pill '+l[1]+'">'+l[0]+'</span></div></div>'});
+h+='<div class="row"><div><p class="nm">'+wifi(lvl(o),l[1],22)+n+'</p><p class="mu">'+o.t+' report'+(o.t===1?"":"s")+' in the last hour</p>'+(o.t>=3?'<div class="bar" style="width:140px"><i style="width:'+o.s+'%"></i></div>':'')+'</div><div style="text-align:right">'+(o.t>=3?'<p class="nm" style="font-size:22px">'+o.s+'%</p>':'')+'<span class="pill '+l[1]+'">'+l[0]+'</span></div></div>'});
+var os=tt>=3?Math.round(tg/tt*100):null,oc=os===null?"var(--mu)":os>=70?"var(--okt)":os>=40?"var(--slt)":"var(--dnt)";
+h='<div class="ov"><p class="mu">Overall network health in '+city()+'</p>'+(os===null?'<p class="nm" style="font-size:18px">Not enough reports yet</p><p class="mu">Tap Report a problem to help</p>':'<p style="font-size:44px;font-weight:500;margin:0;color:'+oc+'">'+wifi(os>=70?3:os>=40?2:1,os>=70?"ok":os>=40?"sl":"dn",36)+os+'%</p><div class="bar"><i style="width:'+os+'%"></i></div><p class="mu">from '+tt+' reports in the last hour</p>')+'</div>'+h;
 document.getElementById("list").innerHTML=h;
 var b=document.getElementById("ban");
 if(worst){b.className="ban dn";b.textContent=worst.n+" is poor in "+city()+": "+worst.s+"% healthy from "+worst.t+" reports"}
@@ -80,6 +99,13 @@ if(last[k]&&Date.now()-last[k]<6e5){m.textContent="You already reported "+NET[se
 last[k]=Date.now();lset("last",last);
 var r={c:city(),n:selN,p:selP,t:Date.now()};
 post(r).then(function(){m.textContent="Report sent. Thank you";load()}).catch(function(){var q=ls("q","[]");q.push(r);lset("q",q);m.textContent="No connection. Saved and will send when you're back online"})};
+document.getElementById("fbopen").onclick=function(){var f=document.getElementById("fb");f.hidden=!f.hidden};
+document.getElementById("fbsend").onclick=function(){
+var m=document.getElementById("fbm").value.trim(),c=document.getElementById("fbc").value.trim(),o=document.getElementById("fbmsg"),b=document.getElementById("fbsend");
+if(m.length<3){o.textContent="Please write a few words first";return}
+var d={m:m.slice(0,500),s:city(),t:Date.now()};if(c)d.c=c.slice(0,60);
+b.disabled=true;
+fetch(DB+"/feedback.json",{method:"POST",body:JSON.stringify(d)}).then(function(x){if(!x.ok)throw 0;document.getElementById("fbm").value="";o.textContent="Thank you. Your feedback was sent";b.disabled=false}).catch(function(){o.textContent="Could not send. Check your connection and try again";b.disabled=false})};
 window.addEventListener("online",flush);
 render();load().then(flush);setInterval(load,30000);
 </script></body></html>
