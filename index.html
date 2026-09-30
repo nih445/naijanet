@@ -35,6 +35,7 @@ select{width:100%;margin:12px 0}
 <p class="mu">Live view of MTN, Airtel, Glo and 9mobile</p>
 <select id="city" aria-label="State"></select>
 <select id="town" aria-label="Town" style="margin-top:0"><option value="">Whole state</option></select>
+<select id="win" aria-label="Time period" style="margin-top:0"><option value="3600000">Last hour</option><option value="21600000">Last 6 hours</option><option value="86400000" selected>Last 24 hours</option><option value="604800000">Last 7 days</option></select>
 <div id="ban"></div><div id="list"></div>
 <button class="big" id="open">Report a problem</button>
 <div class="sheet" id="sheet" hidden>
@@ -76,7 +77,9 @@ var ks=Object.keys(c).sort(function(a,b){return c[b]-c[a]}).slice(0,40),t=docume
 t.innerHTML='<option value="">Whole state</option>'+ks.map(function(k){return"<option>"+nm[k]+"</option>"}).join("");
 t.value=cur&&ks.indexOf(cur)>-1?nm[cur]:"";
 document.getElementById("tl").innerHTML=ks.map(function(k){return'<option value="'+nm[k]+'">'}).join("")}
-function stat(i){var h=Date.now()-36e5,g=0,b=0;reports.forEach(function(r){if(r.n===i&&r.t>h&&(!T()||norm(r.w)===T())){if(r.p===4)g++;else b++}});var t=g+b;return{t:t,g:g,s:t?Math.round(g/t*100):null}}
+function W(){return +document.getElementById("win").value}
+function wl(){return{3600000:"in the last hour",21600000:"in the last 6 hours",86400000:"in the last 24 hours",604800000:"in the last 7 days"}[W()]||"recently"}
+function stat(i){var h=Date.now()-W(),g=0,b=0;reports.forEach(function(r){if(r.n===i&&r.t>h&&(!T()||norm(r.w)===T())){if(r.p===4)g++;else b++}});var t=g+b;return{t:t,g:g,s:t?Math.round(g/t*100):null}}
 function lab(o){if(o.t<3)return[o.t?"Too few reports":"No reports yet","gr"];return o.s>=70?["Good","ok"]:o.s>=40?["Unstable","sl"]:["Poor","dn"]}
 function wifi(n,c,px){var a=["M9 15.5a5 5 0 0 1 6 0","M5.5 12a10 10 0 0 1 13 0","M2 8.5a15 15 0 0 1 20 0"],p="";a.forEach(function(d,k){p+='<path class="a'+(k+1)+(k<n?' on':'')+'" d="'+d+'"/>'});return'<svg class="w '+c+'" viewBox="0 0 24 24" style="width:'+px+'px;height:'+px+'px" aria-hidden="true">'+p+'<circle cx="12" cy="19" r="1.7"/></svg>'}
 function lvl(o){return o.t<3?0:o.s>=70?3:o.s>=40?2:1}
@@ -84,19 +87,19 @@ function render(){
 var h="",worst=null,tg=0,tt=0;
 NET.forEach(function(n,i){var o=stat(i),l=lab(o);tg+=o.g;tt+=o.t;
 if(o.t>=3&&o.s<40&&(!worst||o.s<worst.s))worst={n:n,s:o.s,t:o.t};
-h+='<div class="row"><div><p class="nm">'+wifi(lvl(o),l[1],22)+n+'</p><p class="mu">'+o.t+' report'+(o.t===1?"":"s")+' in the last hour</p>'+(o.t>=3?'<div class="bar" style="width:140px"><i style="width:'+o.s+'%"></i></div>':'')+'</div><div style="text-align:right">'+(o.t>=3?'<p class="nm" style="font-size:22px">'+o.s+'%</p>':'')+'<span class="pill '+l[1]+'">'+l[0]+'</span></div></div>'});
-var tw="";if(!T()){var m={};reports.forEach(function(r){var k=norm(r.w);if(k&&r.t>Date.now()-36e5){var x=m[k]||(m[k]={n:tc(r.w),g:0,t:0});x.t++;if(r.p===4)x.g++}});
+h+='<div class="row"><div><p class="nm">'+wifi(lvl(o),l[1],22)+n+'</p><p class="mu">'+o.t+' report'+(o.t===1?"":"s")+' '+wl()+'</p>'+(o.t>=3?'<div class="bar" style="width:140px"><i style="width:'+o.s+'%"></i></div>':'')+'</div><div style="text-align:right">'+(o.t>=3?'<p class="nm" style="font-size:22px">'+o.s+'%</p>':'')+'<span class="pill '+l[1]+'">'+l[0]+'</span></div></div>'});
+var tw="";if(!T()){var m={};reports.forEach(function(r){var k=norm(r.w);if(k&&r.t>Date.now()-W()){var x=m[k]||(m[k]={n:tc(r.w),g:0,t:0});x.t++;if(r.p===4)x.g++}});
 var low=Object.keys(m).map(function(k){var x=m[k];x.s=Math.round(x.g/x.t*100);return x}).filter(function(x){return x.t>=3&&x.s<70}).sort(function(a,b){return a.s-b.s||b.t-a.t}).slice(0,5);
-if(low.length)tw='<div class="ov" style="background:var(--dnb)"><p class="nm" style="color:var(--dnt)">Towns with weak network</p>'+low.map(function(x){var c=x.s<40?["Low","dn"]:["Unstable","sl"];return'<div class="row tw" data-t="'+x.n+'" style="cursor:pointer"><div><p class="nm">'+x.n+'</p><p class="mu">'+x.t+' reports in the last hour. Tap to open</p></div><div style="text-align:right"><p class="nm" style="font-size:22px">'+x.s+'%</p><span class="pill '+c[1]+'">'+c[0]+'</span></div></div>'}).join("")+'</div>'}
+if(low.length)tw='<div class="ov" style="background:var(--dnb)"><p class="nm" style="color:var(--dnt)">Towns with weak network</p>'+low.map(function(x){var c=x.s<40?["Low","dn"]:["Unstable","sl"];return'<div class="row tw" data-t="'+x.n+'" style="cursor:pointer"><div><p class="nm">'+x.n+'</p><p class="mu">'+x.t+' reports '+wl()+'. Tap to open</p></div><div style="text-align:right"><p class="nm" style="font-size:22px">'+x.s+'%</p><span class="pill '+c[1]+'">'+c[0]+'</span></div></div>'}).join("")+'</div>'}
 var os=tt>=3?Math.round(tg/tt*100):null,oc=os===null?"var(--mu)":os>=70?"var(--okt)":os>=40?"var(--slt)":"var(--dnt)";
-h='<div class="ov"><p class="mu">Overall network health in '+where()+'</p>'+(os===null?'<p class="nm" style="font-size:18px">Not enough reports yet</p><p class="mu">Tap Report a problem to help</p>':'<p style="font-size:44px;font-weight:500;margin:0;color:'+oc+'">'+wifi(os>=70?3:os>=40?2:1,os>=70?"ok":os>=40?"sl":"dn",36)+os+'%</p><div class="bar"><i style="width:'+os+'%"></i></div><p class="mu">from '+tt+' reports in the last hour</p>')+'</div>'+tw+h;
+h='<div class="ov"><p class="mu">Overall network health in '+where()+'</p>'+(os===null?'<p class="nm" style="font-size:18px">Not enough reports yet</p><p class="mu">Tap Report a problem to help</p>':'<p style="font-size:44px;font-weight:500;margin:0;color:'+oc+'">'+wifi(os>=70?3:os>=40?2:1,os>=70?"ok":os>=40?"sl":"dn",36)+os+'%</p><div class="bar"><i style="width:'+os+'%"></i></div><p class="mu">from '+tt+' reports '+wl()+'</p>')+'</div>'+tw+h;
 document.getElementById("list").innerHTML=h;
 var b=document.getElementById("ban");
 if(worst){b.className="ban dn";b.textContent=worst.n+" is poor in "+where()+": "+worst.s+"% healthy from "+worst.t+" reports"}
 else{b.className="ban gr";b.textContent="No serious problems reported in "+where()}
-document.getElementById("note").textContent=(online?"Live data from other users. Updates every 30 seconds.":"You're offline. Showing the last data.")+" Health % is the share of reports in the last hour saying the network works. It needs at least 3 reports."}
+document.getElementById("note").textContent=(online?"Live data from other users. Updates every 30 seconds.":"You're offline. Showing the last data.")+" Health % is the share of reports "+wl()+" saying the network works. It needs at least 3 reports."}
 function load(){
-var u=DB+"/reports/"+key(city())+".json?orderBy="+encodeURIComponent('"$key"')+"&limitToLast=300";
+var u=DB+"/reports/"+key(city())+".json?orderBy="+encodeURIComponent('"$key"')+"&limitToLast=1000";
 return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){reports=d?Object.keys(d).map(function(k){return d[k]}):[];online=true;towns();render()}).catch(function(){online=false;render()})}
 function post(r){return fetch(DB+"/reports/"+key(r.c)+".json",{method:"POST",body:JSON.stringify(r.w?{n:r.n,p:r.p,t:r.t,w:r.w}:{n:r.n,p:r.p,t:r.t})}).then(function(x){if(!x.ok)throw 0})}
 function flush(){var q=ls("q","[]");if(!q.length)return;var rest=[];
@@ -106,6 +109,7 @@ b.onclick=function(){setter(i);Array.prototype.forEach.call(el.children,function
 chips("nets",NET,function(i){selN=i});chips("probs",PROB,function(i){selP=i});
 document.getElementById("open").onclick=function(){var s=document.getElementById("sheet");s.hidden=!s.hidden};
 sel.onchange=function(){lset("st",city());reports=[];towns();document.getElementById("rw").value="";render();load()};
+var wsel=document.getElementById("win"),wv=ls("win",'"86400000"');if(["3600000","21600000","86400000","604800000"].indexOf(wv)>-1)wsel.value=wv;wsel.onchange=function(){lset("win",wsel.value);render()};
 document.getElementById("list").onclick=function(e){var el=e.target.closest?e.target.closest(".tw"):null;if(!el)return;var t=document.getElementById("town");t.value=el.getAttribute("data-t");document.getElementById("rw").value=t.value;render()};
 document.getElementById("town").onchange=function(){document.getElementById("rw").value=this.value;render()};
 document.getElementById("send").onclick=function(){
