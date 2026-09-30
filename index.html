@@ -17,7 +17,7 @@ select{width:100%;margin:12px 0}
 .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}
 .nm{font-weight:500;margin:0}
 .pill{font-size:13px;padding:3px 10px;border-radius:8px}
-.ok{background:var(--okb);color:var(--okt)}.sl{background:var(--slb);color:var(--slt)}.dn{background:var(--dnb);color:var(--dnt)}
+.gr{background:var(--card);color:var(--mu)}.ok{background:var(--okb);color:var(--okt)}.sl{background:var(--slb);color:var(--slt)}.dn{background:var(--dnb);color:var(--dnt)}
 .big{width:100%;margin-top:14px;min-height:48px;background:var(--ac);color:#fff;border:0;font-weight:500}
 .sheet{background:var(--card);border-radius:12px;padding:14px;margin-top:14px}
 .chip{display:inline-block;margin:0 6px 8px 0;min-height:44px}
@@ -32,7 +32,7 @@ select{width:100%;margin:12px 0}
 <button class="big" id="open">Report a problem</button>
 <div class="sheet" id="sheet" hidden>
 <p class="nm">Which network?</p><div id="nets"></div>
-<p class="nm">What's wrong?</p><div id="probs"></div>
+<p class="nm">How is it?</p><div id="probs"></div>
 <button class="big" id="send" style="margin-top:4px">Send report</button>
 <p class="msg" id="msg" role="status"></p>
 </div>
@@ -40,7 +40,7 @@ select{width:100%;margin:12px 0}
 </main>
 <script>
 var DB="https://naijanet-d1c6d-default-rtdb.europe-west1.firebasedatabase.app";
-var NET=["MTN","Airtel","Glo","9mobile"],PROB=["No signal","Slow data","Calls failing","SMS delayed"];
+var NET=["MTN","Airtel","Glo","9mobile"],PROB=["No signal","Slow data","Calls failing","SMS delayed","Working fine"];
 var STATES=["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"];
 var sel=document.getElementById("city");STATES.forEach(function(s){var o=document.createElement("option");o.textContent=s;sel.appendChild(o)});
 try{sel.value=localStorage.getItem("st")||"Lagos"}catch(e){sel.value="Lagos"}
@@ -49,16 +49,18 @@ function city(){return sel.value}
 function key(s){return s.replace(/ /g,"_")}
 function ls(k,d){try{return JSON.parse(localStorage.getItem(k)||d)}catch(e){return JSON.parse(d)}}
 function lset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-function count(i){var h=Date.now()-36e5;return reports.filter(function(r){return r.n===i&&r.t>h}).length}
-function st(c){return c>=15?["Down","dn"]:c>=5?["Slow","sl"]:["Working","ok"]}
+function stat(i){var h=Date.now()-36e5,g=0,b=0;reports.forEach(function(r){if(r.n===i&&r.t>h){if(r.p===4)g++;else b++}});var t=g+b;return{t:t,s:t?Math.round(g/t*100):null}}
+function lab(o){if(o.t<3)return[o.t?"Too few reports":"No reports yet","gr"];return o.s>=70?["Good","ok"]:o.s>=40?["Unstable","sl"]:["Poor","dn"]}
 function render(){
-var h="",w=0,wi=0;
-NET.forEach(function(n,i){var c=count(i),s=st(c);if(c>w){w=c;wi=i}
-h+='<div class="row"><div><p class="nm">'+n+'</p><p class="mu">'+c+' report'+(c===1?"":"s")+' in the last hour</p></div><span class="pill '+s[1]+'">'+s[0]+'</span></div>'});
+var h="",worst=null;
+NET.forEach(function(n,i){var o=stat(i),l=lab(o);
+if(o.t>=3&&o.s<40&&(!worst||o.s<worst.s))worst={n:n,s:o.s,t:o.t};
+h+='<div class="row"><div><p class="nm">'+n+'</p><p class="mu">'+o.t+' report'+(o.t===1?"":"s")+' in the last hour</p></div><div style="text-align:right">'+(o.t>=3?'<p class="nm" style="font-size:22px">'+o.s+'%</p>':'')+'<span class="pill '+l[1]+'">'+l[0]+'</span></div></div>'});
 document.getElementById("list").innerHTML=h;
-var b=document.getElementById("ban");b.className="ban "+st(w)[1];
-b.textContent=w>=5?NET[wi]+" has "+w+" reports in "+city()+" in the last hour":"No major problems reported in "+city();
-document.getElementById("note").textContent=online?"Live data from other users. Updates every 30 seconds.":"You're offline. Showing the last data. Your reports will send when you're back online."}
+var b=document.getElementById("ban");
+if(worst){b.className="ban dn";b.textContent=worst.n+" is poor in "+city()+": "+worst.s+"% healthy from "+worst.t+" reports"}
+else{b.className="ban gr";b.textContent="No serious problems reported in "+city()}
+document.getElementById("note").textContent=(online?"Live data from other users. Updates every 30 seconds.":"You're offline. Showing the last data.")+" Health % is the share of reports in the last hour saying the network works. It needs at least 3 reports."}
 function load(){
 var u=DB+"/reports/"+key(city())+".json?orderBy="+encodeURIComponent('"$key"')+"&limitToLast=300";
 return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){reports=d?Object.keys(d).map(function(k){return d[k]}):[];online=true;render()}).catch(function(){online=false;render()})}
