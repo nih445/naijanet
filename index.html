@@ -62,7 +62,7 @@ var NET=["MTN","Airtel","Glo","9mobile"],PROB=["No signal","Slow data","Calls fa
 var STATES=["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"];
 var sel=document.getElementById("city");STATES.forEach(function(s){var o=document.createElement("option");o.textContent=s;sel.appendChild(o)});
 var sv=ls("st",'"Lagos"');sel.value=STATES.indexOf(sv)>-1?sv:"Lagos";
-var reports=[],selN=null,selP=null,online=true;
+var reports=[],selN=null,selP=null,online=true,U=/^[a-z0-9]{8,24}$/,zc=0;
 function city(){return sel.value}
 function key(s){return s.replace(/ /g,"_")}
 function ls(k,d){try{return JSON.parse(localStorage.getItem(k)||d)}catch(e){return JSON.parse(d)}}
@@ -79,19 +79,24 @@ t.value=cur&&ks.indexOf(cur)>-1?nm[cur]:"";
 document.getElementById("tl").innerHTML=ks.map(function(k){return'<option value="'+nm[k]+'">'}).join("")}
 function W(){return +document.getElementById("win").value}
 function wl(){return{3600000:"in the last hour",21600000:"in the last 6 hours",86400000:"in the last 24 hours",604800000:"in the last 7 days"}[W()]||"recently"}
-function stat(i){var h=Date.now()-W(),g=0,b=0;reports.forEach(function(r){if(r.n===i&&r.t>h&&(!T()||norm(r.w)===T())){if(r.p===4)g++;else b++}});var t=g+b;return{t:t,g:g,s:t?Math.round(g/t*100):null}}
+function uid(){var v=ls("uid",'""');if(typeof v==="string"&&U.test(v))return v;var a="",i;try{var b=new Uint8Array(12);crypto.getRandomValues(b);for(i=0;i<12;i++)a+=(b[i]%36).toString(36)}catch(e){a="";for(i=0;i<12;i++)a+=Math.floor(Math.random()*36).toString(36)}lset("uid",a);return a}
+function pl(r){var o={n:r.n,p:r.p,t:r.t};if(r.w)o.w=r.w;if(r.u)o.u=r.u;return o}
+function pick(n){var h=Date.now()-W(),m={},k=0,tn=T();
+reports.forEach(function(r){if(r.t>h&&(n<0||r.n===n)&&(!tn||norm(r.w)===tn)){var key=(r.u&&U.test(r.u))?r.n+"|"+r.u:"x"+(k++);if(!m[key]||r.t>m[key].t)m[key]=r}});
+return Object.keys(m).map(function(x){return m[x]})}
+function stat(i){var l=pick(i),g=0,d={};l.forEach(function(r){if(r.p===4)g++;d[(r.u&&U.test(r.u))?r.u:"x"+(zc++)]=1});var t=l.length;return{t:t,g:g,d:Object.keys(d),s:t?Math.round(g/t*100):null}}
 function lab(o){if(o.t<3)return[o.t?"Too few reports":"No reports yet","gr"];return o.s>=70?["Good","ok"]:o.s>=40?["Unstable","sl"]:["Poor","dn"]}
 function wifi(n,c,px){var a=["M9 15.5a5 5 0 0 1 6 0","M5.5 12a10 10 0 0 1 13 0","M2 8.5a15 15 0 0 1 20 0"],p="";a.forEach(function(d,k){p+='<path class="a'+(k+1)+(k<n?' on':'')+'" d="'+d+'"/>'});return'<svg class="w '+c+'" viewBox="0 0 24 24" style="width:'+px+'px;height:'+px+'px" aria-hidden="true">'+p+'<circle cx="12" cy="19" r="1.7"/></svg>'}
 function lvl(o){return o.t<3?0:o.s>=70?3:o.s>=40?2:1}
 function render(){
-var h="",worst=null,tg=0,tt=0;
-NET.forEach(function(n,i){var o=stat(i),l=lab(o);tg+=o.g;tt+=o.t;
+var h="",worst=null,tg=0,tt=0,dv={};
+NET.forEach(function(n,i){var o=stat(i),l=lab(o);tg+=o.g;tt+=o.t;o.d.forEach(function(x){dv[x]=1});
 if(o.t>=3&&o.s<40&&(!worst||o.s<worst.s))worst={n:n,s:o.s,t:o.t};
 h+='<div class="row"><div><p class="nm">'+wifi(lvl(o),l[1],22)+n+'</p><p class="mu">'+o.t+' report'+(o.t===1?"":"s")+' '+wl()+'</p>'+(o.t>=3?'<div class="bar" style="width:140px"><i style="width:'+o.s+'%"></i></div>':'')+'</div><div style="text-align:right">'+(o.t>=3?'<p class="nm" style="font-size:22px">'+o.s+'%</p>':'')+'<span class="pill '+l[1]+'">'+l[0]+'</span></div></div>'});
-var tw="";if(!T()){var m={};reports.forEach(function(r){var k=norm(r.w);if(k&&r.t>Date.now()-W()){var x=m[k]||(m[k]={n:tc(r.w),g:0,t:0});x.t++;if(r.p===4)x.g++}});
-var low=Object.keys(m).map(function(k){var x=m[k];x.s=Math.round(x.g/x.t*100);return x}).filter(function(x){return x.t>=3&&x.s<70}).sort(function(a,b){return a.s-b.s||b.t-a.t}).slice(0,5);
-if(low.length)tw='<div class="ov" style="background:var(--dnb)"><p class="nm" style="color:var(--dnt)">Towns with weak network</p>'+low.map(function(x){var c=x.s<40?["Low","dn"]:["Unstable","sl"];return'<div class="row tw" data-t="'+x.n+'" style="cursor:pointer"><div><p class="nm">'+x.n+'</p><p class="mu">'+x.t+' reports '+wl()+'. Tap to open</p></div><div style="text-align:right"><p class="nm" style="font-size:22px">'+x.s+'%</p><span class="pill '+c[1]+'">'+c[0]+'</span></div></div>'}).join("")+'</div>'}
-var os=tt>=3?Math.round(tg/tt*100):null,oc=os===null?"var(--mu)":os>=70?"var(--okt)":os>=40?"var(--slt)":"var(--dnt)";
+var tw="";if(!T()){var m={};pick(-1).forEach(function(r){var k=norm(r.w);if(k){var x=m[k]||(m[k]={n:tc(r.w),g:0,t:0,d:{}});x.t++;if(r.p===4)x.g++;x.d[(r.u&&U.test(r.u))?r.u:"x"+(zc++)]=1}});
+var low=Object.keys(m).map(function(k){var x=m[k];x.s=Math.round(x.g/x.t*100);x.dn=Object.keys(x.d).length;return x}).filter(function(x){return x.dn>=3&&x.s<70}).sort(function(a,b){return a.s-b.s||b.t-a.t}).slice(0,5);
+if(low.length)tw='<div class="ov" style="background:var(--dnb)"><p class="nm" style="color:var(--dnt)">Towns with weak network</p>'+low.map(function(x){var c=x.s<40?["Low","dn"]:["Unstable","sl"];return'<div class="row tw" data-t="'+x.n+'" style="cursor:pointer"><div><p class="nm">'+x.n+'</p><p class="mu">'+x.dn+' people reported '+wl()+'. Tap to open</p></div><div style="text-align:right"><p class="nm" style="font-size:22px">'+x.s+'%</p><span class="pill '+c[1]+'">'+c[0]+'</span></div></div>'}).join("")+'</div>'}
+var os=(tt>=3&&Object.keys(dv).length>=3)?Math.round(tg/tt*100):null,oc=os===null?"var(--mu)":os>=70?"var(--okt)":os>=40?"var(--slt)":"var(--dnt)";
 h='<div class="ov"><p class="mu">Overall network health in '+where()+'</p>'+(os===null?'<p class="nm" style="font-size:18px">Not enough reports yet</p><p class="mu">Tap Report a problem to help</p>':'<p style="font-size:44px;font-weight:500;margin:0;color:'+oc+'">'+wifi(os>=70?3:os>=40?2:1,os>=70?"ok":os>=40?"sl":"dn",36)+os+'%</p><div class="bar"><i style="width:'+os+'%"></i></div><p class="mu">from '+tt+' reports '+wl()+'</p>')+'</div>'+tw+h;
 document.getElementById("list").innerHTML=h;
 var b=document.getElementById("ban");
@@ -101,7 +106,7 @@ document.getElementById("note").textContent=(online?"Live data from other users.
 function load(){
 var u=DB+"/reports/"+key(city())+".json?orderBy="+encodeURIComponent('"$key"')+"&limitToLast=1000";
 return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){reports=d?Object.keys(d).map(function(k){return d[k]}):[];online=true;towns();render()}).catch(function(){online=false;render()})}
-function post(r){return fetch(DB+"/reports/"+key(r.c)+".json",{method:"POST",body:JSON.stringify(r.w?{n:r.n,p:r.p,t:r.t,w:r.w}:{n:r.n,p:r.p,t:r.t})}).then(function(x){if(!x.ok)throw 0})}
+function post(r){return fetch(DB+"/reports/"+key(r.c)+".json",{method:"POST",body:JSON.stringify(pl(r))}).then(function(x){if(!x.ok)throw 0})}
 function flush(){var q=ls("q","[]");if(!q.length)return;var rest=[];
 q.reduce(function(p,r){return p.then(function(){return post(r)}).catch(function(){rest.push(r)})},Promise.resolve()).then(function(){lset("q",rest);load()})}
 function chips(id,arr,setter){var el=document.getElementById(id);arr.forEach(function(t,i){var b=document.createElement("button");b.className="chip";b.textContent=t;
@@ -119,7 +124,7 @@ var w=document.getElementById("rw").value.trim();if(w&&!ok(w)){m.textContent="To
 var last=ls("last","{}"),k=city()+selN;
 if(last[k]&&Date.now()-last[k]<6e5){m.textContent="You already reported "+NET[selN]+" here in the last 10 minutes";return}
 last[k]=Date.now();lset("last",last);
-var r={c:city(),n:selN,p:selP,t:Date.now()};if(w)r.w=tc(w);
+var r={c:city(),n:selN,p:selP,t:Date.now(),u:uid()};if(w)r.w=tc(w);
 post(r).then(function(){m.textContent="Report sent. Thank you";load()}).catch(function(){var q=ls("q","[]");q.push(r);lset("q",q);m.textContent="No connection. Saved and will send when you're back online"})};
 document.getElementById("fbopen").onclick=function(){var f=document.getElementById("fb");f.hidden=!f.hidden};
 document.getElementById("fbsend").onclick=function(){
