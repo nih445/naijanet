@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Debt Book</title>
+<style>
+:root{box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px);--pg:#eaeded;--card:#fff;--tx:#0f1111;--mu:#565959;--bd:#d5d9d9;--ok:#007600;--okb:#e6f4e6;--dn:#b12704;--dnb:#fdeceb;--top:#131921;--yl:#ffd814;--yh:#f7ca00}
+@media (prefers-color-scheme:dark){:root{--pg:#0f1111;--card:#1a1d1d;--tx:#f0f2f2;--mu:#a5acac;--bd:#3a4040;--ok:#7fd67f;--okb:#17331a;--dn:#ff9b8a;--dnb:#3d1b17;--top:#0b0f12}}
+body{margin:0;background:var(--pg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header.top{background:var(--top);color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;position:sticky;top:0;z-index:5;border-bottom:3px solid #ff9900}
+header .tw{max-width:480px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+header b{font-size:20px;font-weight:600}header span{font-size:12px;color:#ff9900}
+main{max-width:480px;margin:0 auto;padding:12px}
+h1{font-size:20px;font-weight:600;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:14px;margin:0 0 12px}
+.mu{color:var(--mu);font-size:13px;margin:0}.big{font-size:32px;font-weight:600;margin:0}
+input{width:100%;box-sizing:border-box;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin:0 0 8px}
+input:focus{outline:2px solid #e77600;border-color:#e77600}
+button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:10px 16px;min-height:44px;margin:0 6px 8px 0}
+button.p{background:var(--yl);color:#0f1111;border:1px solid #fcd200;font-weight:500}
+button.p:active{background:var(--yh)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:var(--card);border:1px solid var(--bd);border-radius:8px;margin:0 0 8px;cursor:pointer}
+.lf{display:flex;align-items:center;gap:10px;min-width:0}
+.av{width:40px;height:40px;border-radius:50%;background:var(--top);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
+.nm{font-weight:600;margin:0}.dn{color:var(--dn)}.ok{color:var(--ok)}
+.chip{font-size:13px;font-weight:600;padding:4px 10px;border-radius:12px;margin:0;white-space:nowrap}
+.chip.dn{background:var(--dnb);color:var(--dn)}.chip.ok{background:var(--okb);color:var(--ok)}
+</style></head><body><header class="top"><div class="tw"><b>Debt Book</b><span>Know who owes you</span></div></header><main id="app"></main>
+<script>
+function load(){try{var d=JSON.parse(localStorage.getItem("debtbook")||"null");if(d&&d.c)return d}catch(e){}return{c:[]}}
+var D=load(),cur=null,q="",app=document.getElementById("app");
+function save(){try{localStorage.setItem("debtbook",JSON.stringify(D))}catch(e){}}
+function N(n){return"\u20a6"+Number(n).toLocaleString("en-NG")}
+function bal(c){return c.tx.reduce(function(s,t){return s+t.a},0)}
+function el(t,a,k){var e=document.createElement(t);Object.keys(a||{}).forEach(function(x){if(x==="class")e.className=a[x];else if(x==="onclick")e.onclick=a[x];else if(x==="oninput")e.oninput=a[x];else e.setAttribute(x,a[x])});(k||[]).forEach(function(c){e.appendChild(typeof c==="string"?document.createTextNode(c):c)});return e}
+function amt(v){var n=parseFloat(String(v).replace(/,/g,""));return n>0?Math.round(n):0}
+function fmt(t){return new Date(t).toLocaleDateString("en-GB")}
+function home(){
+app.innerHTML="";
+var owed=0;D.c.forEach(function(c){var b=bal(c);if(b>0)owed+=b});
+app.appendChild(el("h1",{},["Your customers"]));
+app.appendChild(el("div",{class:"card"},[el("p",{class:"mu"},["Total owed to you"]),el("p",{class:"big dn"},[N(owed)])]));
+var f=el("div",{class:"card",id:"f",style:"display:none"},[
+el("input",{id:"n",placeholder:"Customer name",maxlength:"40"}),
+el("input",{id:"ph",placeholder:"Phone (optional, for reminders)",inputmode:"tel",maxlength:"20"}),
+el("input",{id:"a",placeholder:"Amount owed now (optional)",inputmode:"numeric",maxlength:"12"}),
+el("input",{id:"nt",placeholder:"Note, e.g. 2 bags of rice",maxlength:"60"}),
+el("button",{class:"p",onclick:addC},["Save customer"])]);
+app.appendChild(el("button",{class:"p",onclick:function(){f.style.display=f.style.display==="none"?"block":"none"}},["+ Add customer"]));
+app.appendChild(f);
+app.appendChild(el("input",{placeholder:"Search customers",oninput:function(e){q=e.target.value.toLowerCase();list()}}));
+app.appendChild(el("div",{id:"l"}));
+app.appendChild(el("button",{onclick:backup},["Copy backup"]));
+app.appendChild(el("button",{onclick:restore},["Restore backup"]));
+app.appendChild(el("p",{class:"mu"},["Your records are saved on this phone only. Copy a backup now and then."]));
+list()}
+function list(){var l=document.getElementById("l");l.innerHTML="";
+var a=D.c.filter(function(c){return c.name.toLowerCase().indexOf(q)>-1}).sort(function(x,y){return bal(y)-bal(x)});
+if(!a.length)l.appendChild(el("p",{class:"mu"},[D.c.length?"No match":"No customers yet. Tap Add customer."]));
+a.forEach(function(c){var b=bal(c);l.appendChild(el("div",{class:"row",onclick:function(){cur=c.id;detail()}},[el("div",{class:"lf"},[el("div",{class:"av"},[c.name.charAt(0).toUpperCase()]),el("div",{},[el("p",{class:"nm"},[c.name]),el("p",{class:"mu"},[c.tx.length?"Last: "+fmt(c.tx[c.tx.length-1].t):"No records"])])]),el("p",{class:"chip "+(b>0?"dn":"ok")},[b>0?"Owes "+N(b):"Paid up"])]))})}
+function addC(){var n=document.getElementById("n").value.trim();if(!n)return;
+var c={id:Date.now(),name:n.slice(0,40),phone:document.getElementById("ph").value.replace(/[^\d+]/g,""),tx:[]},a=amt(document.getElementById("a").value);
+if(a)c.tx.push({a:a,t:Date.now(),n:document.getElementById("nt").value.trim().slice(0,60)});
+D.c.push(c);save();home()}
+function detail(){var c=D.c.filter(function(x){return x.id===cur})[0];if(!c){cur=null;return home()}
+app.innerHTML="";var b=bal(c);
+app.appendChild(el("button",{onclick:function(){cur=null;home()}},["< Back"]));
+app.appendChild(el("h1",{},[c.name]));
+app.appendChild(el("div",{class:"card"},[el("p",{class:"mu"},["Balance owed"]),el("p",{class:"big "+(b>0?"dn":"ok")},[b>0?N(b):"Paid up"])]));
+app.appendChild(el("input",{id:"x",placeholder:"Amount",inputmode:"numeric",maxlength:"12"}));
+app.appendChild(el("input",{id:"y",placeholder:"Note (optional)",maxlength:"60"}));
+app.appendChild(el("button",{class:"p",onclick:function(){tx(c,1)}},["Add debt"]));
+app.appendChild(el("button",{onclick:function(){tx(c,-1)}},["Record payment"]));
+if(b>0)app.appendChild(el("button",{onclick:function(){remind(c,b)}},["Remind on WhatsApp"]));
+c.tx.slice().reverse().forEach(function(t){app.appendChild(el("div",{class:"row",style:"cursor:default"},[el("div",{},[el("p",{class:"nm"},[t.n||(t.a>0?"Debt":"Payment")]),el("p",{class:"mu"},[fmt(t.t)])]),el("p",{class:"nm "+(t.a>0?"dn":"ok")},[(t.a>0?"+":"-")+N(Math.abs(t.a))])]))});
+app.appendChild(el("button",{onclick:function(){if(confirm("Delete "+c.name+" and all records?")){D.c=D.c.filter(function(x){return x.id!==c.id});save();cur=null;home()}}},["Delete customer"]))}
+function tx(c,s){var a=amt(document.getElementById("x").value);if(!a)return;
+c.tx.push({a:a*s,t:Date.now(),n:document.getElementById("y").value.trim().slice(0,60)});save();detail()}
+function remind(c,b){var p=c.phone.replace(/\D/g,"");if(p.charAt(0)==="0")p="234"+p.slice(1);
+var m="Hello "+c.name+", a friendly reminder that you owe "+N(b)+". Thank you.";
+window.open("https://wa.me/"+p+"?text="+encodeURIComponent(m),"_blank")}
+function backup(){var s=JSON.stringify(D);try{navigator.clipboard.writeText(s).then(function(){alert("Backup copied. Paste it into WhatsApp or Notes to keep it safe.")})}catch(e){prompt("Copy this backup:",s)}}
+function restore(){var s=prompt("Paste your backup here");if(!s)return;try{var d=JSON.parse(s);if(d&&d.c){D=d;save();home()}else alert("That is not a valid backup")}catch(e){alert("That is not a valid backup")}}
+home();
+</script></body></html>
