@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Debt Book</title>
+<style>
+:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);--paper:#fbf6e6;--card:#fffdf3;--ink:#1d3557;--mute:#6b6f7a;--line:#cfe0ea;--green:#2a7a4b;--red:#c1272d;--gold:#f2c94c;--note:#fff3b0}
+*{box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent}
+body{margin:0;background-color:var(--paper);background-image:linear-gradient(transparent 31px,var(--line) 31px);background-size:100% 32px;color:var(--ink);font:400 17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding-bottom:120px;min-height:100vh}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px 0 52px;position:relative}
+.wrap:before{content:"";position:fixed;top:0;bottom:0;left:max(40px,calc(50% - 220px));width:2px;background:rgba(193,39,45,.55);z-index:0}
+.spiral{height:30px;margin:0 -16px 0 -52px;background:radial-gradient(circle at 50% 50%,#2b2b33 0 6px,#b9b3a0 7px 8px,transparent 9px) repeat-x;background-size:34px 30px;background-position:12px 0}
+.brand{display:flex;align-items:center;gap:12px;padding:8px 0 4px}
+.logo{width:48px;height:48px;border-radius:50%;border:3px solid var(--red);color:var(--red);font-weight:700;font-size:28px;line-height:42px;text-align:center;transform:rotate(-6deg)}
+.brand h1{margin:0;font-size:28px;line-height:1.1;font-weight:800}
+.tag{font-size:15px;color:var(--mute)}
+h1{font-size:26px;font-weight:700;margin:4px 0 8px}
+h3{margin:14px 0 4px;font-size:20px}
+.stats{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin:18px 0 12px}
+.stat{position:relative;background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:12px 14px;box-shadow:4px 4px 0 rgba(29,53,87,.3);transform:rotate(1deg)}
+.stat:first-child{background:var(--note);transform:rotate(-1.2deg)}
+.stat:before{content:"";position:absolute;top:-11px;left:50%;width:64px;height:20px;background:rgba(205,185,120,.6);transform:translateX(-50%) rotate(-3deg)}
+.stat span{font-size:14px;color:var(--mute)}
+.stat b{display:block;font-size:28px;line-height:1.15;font-weight:800}
+#total{color:var(--red)}#coll{color:var(--green);font-size:22px;padding-top:4px}
+input,select{width:100%;padding:9px 10px;border:0;border-bottom:2px solid var(--ink);border-radius:4px 4px 0 0;background:rgba(255,255,255,.65);margin:4px 0;font:inherit;color:inherit;outline:0}
+input:focus,select:focus{background:#fff;border-bottom-color:var(--red)}
+button{padding:8px 16px;border:2px solid var(--ink);border-radius:10px;background:var(--ink);color:#fff;font:700 15px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;cursor:pointer;box-shadow:3px 3px 0 rgba(29,53,87,.35)}
+button.alt{background:var(--card);color:var(--ink)}
+button.pay{background:var(--green);border-color:var(--green)}
+button.danger{background:var(--red);border-color:var(--red)}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(29,53,87,.35)}
+button.chip{padding:3px 14px;border-radius:20px;font-size:15px;box-shadow:none}
+button.chip.on{background:var(--ink);color:#fff}
+.chips,.btns{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.row{display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:2px dashed #b4cad6;cursor:pointer;position:relative}
+.row:active{background:rgba(255,243,176,.7)}
+.row small{color:var(--mute);display:block;font-size:14px;line-height:1.3}
+.nm{flex:1;min-width:0;font-weight:700;font-size:18px;line-height:1.25}
+.owe{color:var(--red);font-weight:800;font-size:19px}.clear{color:var(--green);font-weight:800;font-size:17px}
+.av{width:40px;height:40px;border-radius:50%;background:transparent!important;border:2px solid var(--ink);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;flex:none}
+.due{display:inline-block;font-size:13px;font-weight:700;padding:0 9px;border-radius:12px;margin-top:3px;border:1.5px solid var(--mute);color:var(--mute)}
+.due.late{border-color:var(--red);color:var(--red);transform:rotate(-2deg)}.due.soon{border-color:#b7791f;color:#b7791f}
+.alert{background:linear-gradient(transparent 12%,var(--note) 12%);border-left:4px solid var(--red);padding:6px 12px;margin:10px 0;font-weight:700;color:var(--red)}
+.empty{text-align:center;padding:36px 8px;color:var(--mute)}.empty b{display:block;font-size:40px}
+.sheet{position:fixed;inset:0;background:rgba(29,53,87,.5);display:none;align-items:flex-end;justify-content:center;z-index:5}
+.sheet.on{display:flex}
+.panel{background-color:var(--paper);background-image:linear-gradient(90deg,transparent 30px,rgba(193,39,45,.55) 30px 32px,transparent 32px),linear-gradient(transparent 31px,var(--line) 31px);background-size:100% 100%,100% 32px;background-attachment:local;width:100%;max-width:520px;max-height:90vh;overflow:auto;padding:18px 16px 24px 46px;border-radius:10px 10px 0 0;border-top:3px solid var(--ink);box-shadow:0 -8px 24px rgba(0,0,0,.25);animation:up .25s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.tx{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1.5px dashed #b4cad6;font-size:16px}
+.bar{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) rotate(-.4deg);width:calc(100% - 24px);max-width:496px;background:var(--note);border:2px solid var(--ink);border-radius:8px;padding:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;box-shadow:4px 4px 0 rgba(29,53,87,.3);z-index:4}
+.bar button{padding:3px 11px;font-size:14px;background:var(--card);color:var(--ink)}
+.status{font-size:14px;color:var(--mute)}
+#status{font-weight:700;font-size:16px;color:var(--green);border:2px dashed var(--green);background:rgba(255,255,255,.6);border-radius:8px;padding:6px 12px;margin:8px 0}
+#status.warn{color:var(--red);border-color:var(--red)}
+#status:empty{display:none}
+a{color:var(--ink)}
+label{font-size:15px;color:var(--mute);display:block;margin-top:8px}
+a.callbtn{display:block;text-align:center;background:var(--green);color:#fff;padding:10px;border:2px solid var(--green);border-radius:10px;font-size:24px;font-weight:700;text-decoration:none;margin:10px 0;box-shadow:3px 3px 0 rgba(29,53,87,.35)}
+#toast{position:fixed;left:50%;bottom:104px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:8px 18px;border-radius:10px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:40;max-width:90%}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.lock{z-index:9;background-color:var(--paper);background-image:linear-gradient(transparent 31px,var(--line) 31px);background-size:100% 32px;align-items:center;overflow:auto}
+.lock .panel{background:transparent;box-shadow:none;border:0;max-height:none;text-align:center;animation:none;padding:20px 20px 30px}
+.lock input{text-align:center;font-size:22px;letter-spacing:2px}
+.lock .owe{font-size:16px}
+#splash{position:fixed;inset:0;z-index:50;background:radial-gradient(circle at 50% 30%,#2b4c7e,#1d3557 55%,#12233b);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;cursor:pointer;transition:opacity .4s,transform .4s}
+#splash.out{opacity:0;transform:scale(1.08);pointer-events:none}
+#splash .bk{font-size:120px;line-height:1;animation:fl 2.4s ease-in-out infinite;filter:drop-shadow(0 12px 18px rgba(0,0,0,.4))}
+#splash h2{font-size:38px;margin:14px 0 4px;font-weight:800;letter-spacing:-.5px}
+#splash p{margin:4px 0;color:#d8e2f0;font-size:17px}
+#splash .gold{color:#f2c94c;font-weight:700}
+#splash .tap{margin-top:34px;padding:12px 28px;border:2px solid #f2c94c;border-radius:30px;color:#f2c94c;font-weight:800;font-size:18px;animation:pl 1.6s ease-in-out infinite}
+@keyframes fl{50%{transform:translateY(-12px) rotate(-3deg)}}
+@keyframes pl{50%{transform:scale(1.07);background:rgba(242,201,76,.15)}}
+@media (prefers-reduced-motion:reduce){.panel{animation:none}#splash .bk,#splash .tap{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="spiral"></div>
+  <div class="brand"><div class="logo">₦</div><div><h1>Debt Book</h1><div class="tag">Know who owes you. Get paid on time.</div></div></div>
+  <div class="status" id="status"></div>
+  <div class="stats"><div class="stat"><span>People owe you</span><b id="total">₦0</b></div><div class="stat"><span>Paid you this month</span><b id="coll">₦0</b></div></div>
+  <div id="alertBox"></div>
+  <input id="search" placeholder="Search name">
+  <div class="chips" id="chips"><button class="alt chip on" data-f="all">All</button><button class="alt chip" data-f="late">Late</button><button class="alt chip" data-f="owing">Owing</button><button class="alt chip" data-f="cleared">Cleared</button></div>
+  <div class="btns"><button id="addBtn">Add person</button></div>
+  <div id="list"></div>
+</div>
+
+<div class="bar">
+  <button class="alt" id="backupBtn">Save backup</button>
+  <button class="alt" id="restoreBtn">Restore backup</button>
+  <button class="alt" id="shareBtn">Share app</button>
+  <button class="alt" id="soundBtn">Sound: On</button>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+</div>
+
+<div class="sheet" id="dlg" style="z-index:30"><div class="panel" id="dp"></div></div>
+<div id="splash"><div class="bk">📔</div><h2>Debt Book</h2><p>Know who owes you.<br>Get paid on time.</p><p class="gold">Thank you for using Debt Book 🙏</p>
+<p>Made for market traders in Nigeria</p><div class="tap">Tap to open</div></div>
+<div id="toast"></div>
+<div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+
+<div class="sheet lock" id="lock"><div class="panel">
+  <h1 id="lkTitle">Your 14 free days have ended</h1>
+  <p style="font-size:30px;font-weight:700;color:var(--red);border:3px solid var(--red);border-radius:8px;display:inline-block;padding:2px 16px;transform:rotate(-3deg);margin:10px 0">Pay <span id="lkPrice"></span> to unlock</p>
+  <p class="status">Your records are safe on this phone.</p>
+  <p><b>Step 1.</b> Send the money to:<br><b id="lkAcct"></b></p>
+  <div class="btns"><button class="alt" id="cpy">Copy account number</button></div>
+  <p><b>Step 2.</b> Press the button below and send your payment screenshot on WhatsApp:</p>
+  <div class="btns"><button class="pay" id="paid">I have paid, send screenshot</button></div>
+  <div id="graceMsg" class="status"></div>
+  <p><b>Step 3.</b> You will get a code on WhatsApp. Type it here:</p>
+  <input id="code" placeholder="Enter code" autocapitalize="characters">
+  <div id="codeMsg" class="owe"></div>
+  <button id="unlock">Unlock</button>
+</div></div>
+
+<script>
+/* ===== YOUR SETTINGS: change these ===== */
+var CONFIG={
+  price:"₦1,000 per month",
+  bank:"Opay",
+  acctNo:"9138280178",
+  acctName:"Uzoamaka Nwankwo",
+  whatsapp:"2349138280178",
+  trialDays:14,
+  accessDays:30,
+  graceHours:24,
+  appLink:"",   /* paste the link where you host this app, so Share app sends it */
+  codes:["DB-2EE68", "DB-2ZYPJ", "DB-3A99X", "DB-4CAK5", "DB-4V3JV", "DB-7EPUS", "DB-7WDJ3", "DB-9SM2D", "DB-B3N3C", "DB-BP2BN", "DB-CB8R5", "DB-E9CPW", "DB-G2T2G", "DB-GAZFK", "DB-HAQZR", "DB-JA64A", "DB-JE62F", "DB-JPSXG", "DB-K8JXT", "DB-MPDQT", "DB-P8DY8", "DB-PM2BF", "DB-Q3JXN", "DB-TPVSA", "DB-WKCZZ", "DB-X4WWW", "DB-XMPX2", "DB-Z9EP2", "DB-ZPMMR", "DB-ZYMPD", "DB-23ZKN", "DB-2CTUU", "DB-2H7J4", "DB-35TMW", "DB-3BD7T", "DB-3K3VP", "DB-3UW6X", "DB-3WH2C", "DB-43SEH", "DB-443ZQ", "DB-4BNUJ", "DB-4DNNS", "DB-4HCKH", "DB-5M6NJ", "DB-5NYKV", "DB-5QC8F", "DB-5VDUV", "DB-7A5GK", "DB-7ABEQ", "DB-7VXTK", "DB-86B7G", "DB-88V44", "DB-89XDT", "DB-8HKES", "DB-8MNF2", "DB-8W2FN", "DB-8ZRMC", "DB-9V84X", "DB-AVVK4", "DB-BD7C5", "DB-BDQ2N", "DB-BEPGQ", "DB-C4PVS", "DB-CDXJP", "DB-CMGCS", "DB-D5P8Q", "DB-DNCVR", "DB-DP6PK", "DB-EN743", "DB-EPUSN", "DB-ET9U6", "DB-EWE2X", "DB-F8TEF", "DB-FK5A5", "DB-GD4VG", "DB-GE2E6", "DB-GTJEY", "DB-GUX4N", "DB-GXJCJ", "DB-H9XH2", "DB-HG4U2", "DB-HR2UY", "DB-HWZ5X", "DB-J5QQU", "DB-JJNRG", "DB-JWZZM", "DB-K6CG7", "DB-K6MAQ", "DB-KGNRQ", "DB-MDKYU", "DB-MHCSV", "DB-MW52E", "DB-NN649", "DB-NVGWG", "DB-P2QYU", "DB-PN9QT", "DB-PTWF3", "DB-QW436", "DB-R7SUC", "DB-RC9J5", "DB-RYVRR", "DB-S2GS6", "DB-SF595", "DB-SF78R", "DB-SPQ28", "DB-SPZ6M", "DB-SWXNA", "DB-TKK2P", "DB-TXHH2", "DB-U59R9", "DB-UTA9D", "DB-UVHWF", "DB-V4ZUP", "DB-VEVXK", "DB-VMZGE", "DB-VVES5", "DB-VYY39", "DB-W2VT3", "DB-W8HPT", "DB-WGCVU", "DB-WJA69", "DB-WWJ5H", "DB-XEJMQ", "DB-XVDQF", "DB-Y9CRX", "DB-YCDQQ", "DB-YUFCD", "DB-YYGUD", "DB-ZPHNA", "DB-ZU927"]
+};
+/* ======================================= */
+
+var DAY=86400000,K="debtbook_data_v1";
+var db={people:[],start:Date.now(),until:0,used:[]};
+try{var s=localStorage.getItem(K);if(s)db=JSON.parse(s)}catch(e){}
+function save(){try{localStorage.setItem(K,JSON.stringify(db))}catch(e){}}
+function $(i){return document.getElementById(i)}
+function money(n){return "₦"+Number(n).toLocaleString("en-NG")}
+function bal(p){return p.tx.reduce(function(a,t){return a+t.amt},0)}
+function avc(n){var c=['#0b7a57','#1d6fa5','#b5651d','#7b4bb0','#c0392b','#0e8a8a'],h=0;for(var i=0;i<n.length;i++)h+=n.charCodeAt(i);return c[h%c.length]}
+function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML}
+function phoneNg(p){p=(p||"").replace(/\D/g,"");if(p.indexOf("0")===0)p="234"+p.slice(1);return p}
+
+/* ---- access ---- */
+function accessEnd(){return Math.max(db.until||0,db.start+CONFIG.trialDays*DAY,db.grace||0)}
+function checkLock(){
+  var left=accessEnd()-Date.now(), days=Math.ceil(left/DAY);
+  $("lock").classList.toggle("on",left<=0);
+  $("lkTitle").textContent=db.until?"Your month has ended":"Your "+CONFIG.trialDays+" free days have ended";
+  var st="";
+  if(left>0){
+    if(db.until>Date.now())st="ACTIVE until "+dateTxt(db.until)+" ("+days+" day"+(days==1?"":"s")+" left)";
+    else if(db.grace>Date.now()&&db.start+CONFIG.trialDays*DAY<Date.now())st="Waiting for your code. Access ends in "+Math.ceil(left/3600000)+" hours";
+    else st="FREE TRIAL: "+days+" of "+CONFIG.trialDays+" free days left. Then "+CONFIG.price.replace(" per month","")+" every month.";
+  }
+  $("status").textContent=st;$("status").className=left>0&&left<3*DAY?"warn":"";
+}
+$("lkPrice").textContent=CONFIG.price;
+$("lkAcct").textContent=CONFIG.bank+" - "+CONFIG.acctNo+" - "+CONFIG.acctName;
+$("cpy").onclick=function(){
+  try{navigator.clipboard.writeText(CONFIG.acctNo);$("cpy").textContent="Copied"}catch(e){$("cpy").textContent=CONFIG.acctNo}
+};
+$("paid").onclick=function(){
+  var end=Math.max(db.until||0,db.start+CONFIG.trialDays*DAY);
+  if((db.graceAt||0)<end&&Date.now()>=end){
+    db.graceAt=Date.now();db.grace=Date.now()+CONFIG.graceHours*3600000;save();
+  }
+  var msg="Hello, I have paid "+CONFIG.price.replace(" per month","")+" for Debt Book. Here is my payment screenshot. Please send my code.";
+  window.open("https://wa.me/"+CONFIG.whatsapp+"?text="+encodeURIComponent(msg),"_blank");
+  checkLock();
+};
+$("unlock").onclick=function(){
+  var c=$("code").value.trim().toUpperCase();
+  if(CONFIG.codes.indexOf(c)<0){$("codeMsg").textContent="Wrong code. Check it and try again.";return}
+  var base=Math.max(Date.now(),db.until||0);
+  if(db.used.indexOf(c)>=0&&db.until>Date.now()){$("codeMsg").textContent="This code is already active.";return}
+  if(db.used.indexOf(c)<0)db.used.push(c);
+  db.until=base+CONFIG.accessDays*DAY;save();$("code").value="";$("codeMsg").textContent="";checkLock();toast("Unlocked until "+dateTxt(db.until));
+};
+
+/* ---- sound, toast, share ---- */
+var AC=null;
+function tone(f,t0,dur,type,vol){
+  var o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(vol,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+  o.connect(g);g.connect(AC.destination);o.start(t0);o.stop(t0+dur);
+}
+function sound(kind){
+  if(db.mute)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended")AC.resume();
+    var t=AC.currentTime;
+    if(kind==="pay"){tone(988,t,.12,"square",.1);tone(1319,t+.1,.55,"square",.1);tone(1976,t+.1,.55,"sine",.12);tone(2637,t+.2,.4,"sine",.06)}
+    else{tone(784,t,.1,"triangle",.25);tone(1175,t+.09,.45,"triangle",.25)}
+    if(navigator.vibrate)navigator.vibrate(40);
+  }catch(e){}
+}
+var tt;function toast(m){var t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("on")},2000)}
+function soundLabel(){$("soundBtn").textContent="Sound: "+(db.mute?"Off":"On")}
+$("soundBtn").onclick=function(){db.mute=!db.mute;save();soundLabel();if(!db.mute)sound("pay")};
+$("shareBtn").onclick=function(){
+  var url=CONFIG.appLink||location.href;
+  var text="I use Debt Book to write who owes me money and when they will pay. Free for 2 weeks: "+url;
+  if(navigator.share){navigator.share({title:"Debt Book",text:text,url:url}).catch(function(){})}
+  else window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank");
+};
+function greet(p){var h=new Date().getHours();return(h<12?"Good morning":h<17?"Good afternoon":"Good evening")+", "+p.name+", "+(p.title||"sir/ma")+". \U0001F337"}
+function statementText(p){
+  var h=new Date().getHours(),g=h<12?"Good morning":h<17?"Good afternoon":"Good evening";
+  var rows=p.tx.slice(-15).map(function(t){
+    return new Date(t.d).toLocaleDateString("en-GB",{day:"2-digit",month:"short"})+"  "+(t.note||(t.amt>0?"Credit":"Payment"))+"  "+(t.amt>0?"":"-")+money(Math.abs(t.amt));
+  });
+  var b=Math.max(bal(p),0),shop=db.biz?db.biz:"";
+  return greet(p)+"\nI hope you and your family are doing well. With respect, please find your invoice"+(shop?" from "+shop:"")+" below.\n\n"+
+    "*INVOICE No. "+String(Date.now()).slice(-6)+"*\nDate: "+new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})+"\n\n"+
+    (rows.join("\n")||"No records")+"\n\n*TOTAL TO PAY: "+money(b)+"*"+
+    (p.due&&b>0?"\nPlease pay by: "+dateTxt(p.due):"")+
+    (b<=0?"\nFully paid. Thank you!":"")+
+    "\n\nThank you so much for your business and support. God bless you abundantly. \U0001F64F"+(shop?"\n"+shop:"");
+}
+
+/* ---- shop name ---- */
+function dlgClose(){$("dlg").classList.remove("on")}
+function ask(msg,label,cb){
+  $("dp").innerHTML='<p style="font-size:18px;font-weight:700">'+esc(msg)+'</p><div class="btns"><button id="dy">'+esc(label)+'</button><button class="alt" id="dn">Cancel</button></div>';
+  $("dlg").classList.add("on");$("dn").onclick=dlgClose;$("dy").onclick=function(){dlgClose();cb()};
+}
+function askText(msg,def,type,cb){
+  $("dp").innerHTML='<p style="font-size:18px;font-weight:700">'+esc(msg)+'</p><input id="dv" type="'+type+'" value="'+esc(def||"").replace(/"/g,"&quot;")+'"><div class="btns"><button id="dy">OK</button><button class="alt" id="dn">Cancel</button></div>';
+  $("dlg").classList.add("on");$("dv").focus();$("dn").onclick=dlgClose;
+  $("dy").onclick=function(){var v=$("dv").value.trim();if(!v)return;dlgClose();cb(v)};
+}
+function askShop(force){
+  if(db.biz&&!force)return db.biz;
+  askText("Your shop or business name (shows on the invoice):",db.biz||"","text",function(v){db.biz=v;save();toast("Shop name saved")});
+  return db.biz||"";
+}
+
+/* ---- due dates ---- */
+function dueTs(v){return v?new Date(v+"T23:59:59").getTime():null}
+function dueInfo(p){
+  if(!p.due||bal(p)<=0)return null;
+  var diff=p.due-Date.now();
+  if(diff<0){var d=Math.max(1,Math.ceil(-diff/DAY));return{c:"late",t:"Overdue "+d+" day"+(d>1?"s":""),late:true,rank:-1e9+diff}}
+  if(diff<DAY)return{c:"soon",t:"Due today",rank:diff};
+  var n=Math.ceil(diff/DAY);
+  return{c:n<=3?"soon":"",t:"Due in "+n+" days",rank:diff};
+}
+function dateTxt(ts){return new Date(ts).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}
+
+/* ---- list ---- */
+function render(){
+  var q=$("search").value.toLowerCase(),tot=0,h="",late=0,lateAmt=0;
+  db.people.forEach(function(p){var b=bal(p);tot+=Math.max(b,0);var di=dueInfo(p);if(di&&di.late){late++;lateAmt+=b}});
+  db.people.slice().sort(function(a,b){
+    var da=dueInfo(a),dbb=dueInfo(b);
+    var ra=da?da.rank:1e12,rb=dbb?dbb.rank:1e12;
+    if(ra!==rb)return ra-rb;return bal(b)-bal(a)}).forEach(function(p){
+    if(q&&p.name.toLowerCase().indexOf(q)<0)return;
+    var b=bal(p),di=dueInfo(p);
+    if(filt==='late'&&!(di&&di.late))return;if(filt==='owing'&&b<=0)return;if(filt==='cleared'&&b>0)return;
+    h+='<div class="row" data-id="'+p.id+'"><div class="av" style="background:'+avc(p.name)+'">'+esc(p.name.trim().charAt(0).toUpperCase())+'</div><div class="nm">'+esc(p.name)+'<small>'+esc(p.phone||"no phone")+'</small>'+(di?'<span class="due '+di.c+'">'+di.t+' ('+dateTxt(p.due)+')</span>':'')+'</div><div class="'+(b>0?"owe":"clear")+'">'+(b>0?money(b):"Cleared")+'</div></div>';
+  });
+  $("list").innerHTML=h||'<div class="empty"><b>📒</b>No one yet.<br>Tap "Add person" to write your first debt.</div>';
+  $("total").textContent=money(tot);
+  var m0=new Date();m0=new Date(m0.getFullYear(),m0.getMonth(),1).getTime(),col=0;
+  db.people.forEach(function(p){p.tx.forEach(function(t){if(t.amt<0&&t.d>=m0)col-=t.amt})});
+  $("coll").textContent=money(col);
+  $("alertBox").innerHTML=late?'<div class="alert">'+late+' '+(late>1?"people are":"person is")+' late: '+money(lateAmt)+'. Remind them today.</div>':'';
+}
+var filt="all";
+$("chips").onclick=function(e){var b=e.target.closest(".chip");if(!b)return;filt=b.dataset.f;
+  [].forEach.call($("chips").children,function(x){x.classList.toggle("on",x===b)});render()};
+$("search").oninput=render;
+$("list").onclick=function(e){var r=e.target.closest(".row");if(r)openPerson(r.dataset.id)};
+
+/* ---- sheets ---- */
+function close(){$("sheet").classList.remove("on")}
+function open(html){$("panel").innerHTML=html;$("sheet").classList.add("on")}
+$("sheet").onclick=function(e){if(e.target===$("sheet"))close()};
+
+$("addBtn").onclick=function(){
+  open('<h1>Add person</h1><input id="n" placeholder="Name"><input id="ph" type="tel" placeholder="Phone (optional)"><input id="a" type="number" inputmode="numeric" placeholder="Amount they owe (₦)"><input id="nt" placeholder="What did they take? (optional)"><label>When will they pay?</label><input id="du" type="date"><label>How do you greet them?</label><select id="ti"><option value="sir/ma">Sir / Ma</option><option value="sir">Sir</option><option value="ma">Ma</option></select><div class="btns"><button id="ok">Save</button><button class="alt" id="no">Cancel</button></div>');
+  $("no").onclick=close;
+  $("ok").onclick=function(){
+    var n=$("n").value.trim(),a=parseFloat($("a").value)||0;
+    if(!n){$("n").focus();return}
+    var p={id:String(Date.now()),name:n,phone:$("ph").value.trim(),title:$("ti").value,tx:[]};
+    if(a>0){p.tx.push({d:Date.now(),amt:a,note:$("nt").value.trim()});p.due=dueTs($("du").value);sound("debt")}
+    db.people.push(p);save();close();render();toast("Saved");
+  };
+};
+
+function openPerson(id){
+  var p=db.people.filter(function(x){return x.id===id})[0];if(!p)return;
+  var b=bal(p),tx=p.tx.slice().reverse().map(function(t){
+    return '<div class="tx"><span>'+new Date(t.d).toLocaleDateString("en-GB")+' '+esc(t.note||(t.amt>0?"Took on credit":"Paid"))+'</span><span class="'+(t.amt>0?"owe":"clear")+'">'+(t.amt>0?"+":"-")+money(Math.abs(t.amt))+'</span></div>';
+  }).join("");
+  var di=dueInfo(p);
+  var b2=Math.max(b,0);
+  var msg=greet(p)+"\nI hope you and your family are doing very well, and that your day has been a blessed one.\n\nWith all respect, I want to gently remind you about the "+money(b2)+" you kindly owe me"+(p.due?", which you promised to settle by "+dateTxt(p.due):"")+". Whenever it is convenient for you, I will be most grateful if you can help me settle it.\n\nThank you so much for your kindness, patience and understanding. I truly appreciate you. God bless you abundantly. \U0001F64F"+(db.biz?"\n"+db.biz:"");
+  var dv=p.due?new Date(p.due).toISOString().slice(0,10):"";
+  var wa=p.phone?'<a href="https://wa.me/'+phoneNg(p.phone)+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener"><button class="alt" type="button">Gentle reminder</button></a>':"";
+  open('<h1>'+esc(p.name)+'</h1><p>Owes: <b class="'+(b>0?"owe":"clear")+'">'+money(Math.max(b,0))+'</b></p>'+
+    (di?'<span class="due '+di.c+'">'+di.t+' ('+dateTxt(p.due)+')</span>':'')+
+    '<input id="amt" type="number" inputmode="numeric" placeholder="Amount (₦)"><input id="nt" placeholder="Note (optional)"><label>When will they pay?</label><input id="du" type="date" value="'+dv+'">'+
+    '<div class="btns"><button id="dbt">Add debt</button><button class="pay" id="pd">Record payment</button></div><div class="btns"><button class="pay" id="pf">Paid in full</button></div><label>How you greet them</label><select id="ti2"><option value="sir/ma">Sir / Ma</option><option value="sir">Sir</option><option value="ma">Ma</option></select>'+
+    '<button class="pay" id="fwa" style="width:100%;font-size:18px;margin-top:10px">Send invoice on WhatsApp</button><div class="btns"><button class="alt" id="fsm">Send by SMS</button><button class="alt" id="fbz">Shop name</button></div>'+
+    '<div class="btns">'+wa+'<button class="alt" id="cal">Call</button><button class="danger" id="del">Delete person</button><button class="alt" id="cl">Close</button></div>'+
+    '<h3>History</h3>'+(tx||'<p class="status">No records yet.</p>'));
+  function add(sign){
+    var a=parseFloat($("amt").value);if(!(a>0)){$("amt").focus();return}
+    p.tx.push({d:Date.now(),amt:sign*a,note:$("nt").value.trim()});p.due=dueTs($("du").value);save();render();openPerson(id);sound(sign>0?"debt":"pay");toast(sign>0?"Debt added":"Payment recorded");
+  }
+  $("dbt").onclick=function(){add(1)};$("pd").onclick=function(){add(-1)};$("cl").onclick=close;
+  $("cal").onclick=function(){
+    function show(n){
+      var tel=n.replace(/[^\d+]/g,"");
+      $("dp").innerHTML='<h1>Call '+esc(p.name)+'</h1><p style="font-size:30px;font-weight:700;text-align:center;letter-spacing:1px;margin:8px 0">'+esc(n)+'</p><a class="callbtn" href="tel:'+tel+'" target="_top">Call now</a><div class="btns"><button class="alt" id="cpn">Copy number</button><button class="alt" id="dn">Close</button></div><p class="status">If your phone does not open the dialer, copy the number or dial it yourself.</p>';
+      $("dlg").classList.add("on");$("dn").onclick=dlgClose;
+      $("cpn").onclick=function(){try{navigator.clipboard.writeText(tel);toast("Number copied")}catch(e){toast("Dial: "+n)}};
+    }
+    if(p.phone)show(p.phone);
+    else askText("Type "+p.name+"'s phone number:","","tel",function(v){p.phone=v;save();render();show(v)});
+  };
+  $("ti2").value=p.title||"sir/ma";$("ti2").onchange=function(){p.title=this.value;save();openPerson(id)};
+    $("pf").onclick=function(){var bb=bal(p);if(bb<=0){toast("Nothing to pay");return}ask("Record full payment of "+money(bb)+"?","Yes, paid",function(){p.tx.push({d:Date.now(),amt:-bb,note:"Paid in full"});p.due=null;save();render();openPerson(id);sound("pay");toast("Paid in full")})};
+  $("fbz").onclick=function(){askShop(true)};
+  $("fwa").onclick=function(){window.open("https://wa.me/"+phoneNg(p.phone)+"?text="+encodeURIComponent(statementText(p)),"_blank")};
+  $("fsm").onclick=function(){location.href="sms:"+(p.phone||"").replace(/\s/g,"")+"?body="+encodeURIComponent(statementText(p).replace(/\*/g,""))};
+    $("del").onclick=function(){ask("Delete "+p.name+" and all their records? This cannot be undone.","Yes, delete",function(){db.people=db.people.filter(function(x){return x.id!==id});save();close();render();toast("Person deleted")})};
+}
+
+/* ---- backup / restore ---- */
+$("backupBtn").onclick=function(){
+  var name="debtbook-backup-"+new Date().toISOString().slice(0,10)+".json";
+  var blob=new Blob([JSON.stringify({people:db.people})],{type:"application/json"});
+  var f=new File([blob],name,{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    navigator.share({files:[f],title:"Debt Book backup"}).catch(function(){});
+  }else{
+    var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+  }
+};
+$("restoreBtn").onclick=function(){$("file").click()};
+$("file").onchange=function(){
+  var f=this.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(){
+    try{
+      var d=JSON.parse(r.result);if(!Array.isArray(d.people))throw 0;
+      ask("Load "+d.people.length+" people from this backup? It will replace what is on this phone.","Yes, restore",function(){db.people=d.people;save();render();toast("Backup restored")})
+    }catch(e){toast("This file is not a Debt Book backup.")}
+  };
+  r.readAsText(f);this.value="";
+};
+
+/* ---- weekly backup nudge ---- */
+try{
+  var lb=localStorage.getItem("debtbook_nudge")||0;
+  if(db.people.length&&Date.now()-lb>7*DAY){localStorage.setItem("debtbook_nudge",Date.now());setTimeout(function(){toast("Weekly reminder: tap Save backup to protect your records")},800)}
+}catch(e){}
+
+$("splash").onclick=function(){this.classList.add("out");var e=this;setTimeout(function(){e.style.display="none"},450);sound("debt")};
+soundLabel();save();render();checkLock();setInterval(checkLock,60000);
+</script>
+</body>
+</html>
